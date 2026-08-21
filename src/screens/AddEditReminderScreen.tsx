@@ -6,6 +6,7 @@ import { useReminder, useReminders } from '../context/RemindersContext';
 import ChipSelector from '../components/ChipSelector';
 import DateTimeField from '../components/DateTimeField';
 import StayOptionsEditor from '../components/StayOptionsEditor';
+import AbstractBackground from '../components/AbstractBackground';
 import type { RecurrenceType, ReminderInput } from '../types/reminder';
 import type { RootStackParamList } from '../navigation/types';
 
@@ -105,7 +106,9 @@ export default function AddEditReminderScreen({ route, navigation }: Props) {
   }
 
   return (
-    <ScrollView style={styles.container} contentContainerStyle={styles.content}>
+    <View style={styles.container}>
+      <AbstractBackground />
+      <ScrollView style={styles.scroll} contentContainerStyle={styles.content}>
       {hasFixedSubcategories && (
         <Field label="Type">
           <ChipSelector
@@ -202,7 +205,8 @@ export default function AddEditReminderScreen({ route, navigation }: Props) {
       <Pressable style={styles.saveButton} onPress={handleSave}>
         <Text style={styles.saveButtonLabel}>{reminderId ? 'Save Changes' : 'Create Reminder'}</Text>
       </Pressable>
-    </ScrollView>
+      </ScrollView>
+    </View>
   );
 }
 
@@ -216,7 +220,8 @@ function Field({ label, children }: { label: string; children: ReactNode }) {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#fff' },
+  container: { flex: 1 },
+  scroll: { flex: 1 },
   content: { padding: 16, paddingBottom: 40 },
   field: { marginBottom: 16 },
   label: { fontSize: 13, fontWeight: '600', color: '#374151', marginBottom: 6 },
@@ -228,6 +233,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     fontSize: 14,
     color: '#111827',
+    backgroundColor: '#FFFFFF',
   },
   multiline: { minHeight: 80, textAlignVertical: 'top' },
   saveButton: {

@@ -13,7 +13,18 @@ export default function AppNavigator() {
   return (
     <NavigationContainer>
       <Stack.Navigator initialRouteName="Home">
-        <Stack.Screen name="Home" component={HomeScreen} options={{ title: 'Reminders' }} />
+        <Stack.Screen
+          name="Home"
+          component={HomeScreen}
+          options={{
+            title: 'Remindly',
+            headerTitleStyle: {
+              fontFamily: 'Poppins_700Bold',
+              fontSize: 22,
+              color: '#2A6F5E',
+            },
+          }}
+        />
         <Stack.Screen
           name="CategoryList"
           component={CategoryListScreen}

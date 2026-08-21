@@ -79,6 +79,7 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     paddingVertical: 10,
     paddingHorizontal: 12,
+    backgroundColor: '#FFFFFF',
   },
   dateField: { flex: 2 },
   timeField: { flex: 1 },

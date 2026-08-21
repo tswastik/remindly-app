@@ -3,6 +3,7 @@ import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { getCategoryDef } from '../constants/categories';
 import { useReminder, useReminders } from '../context/RemindersContext';
 import { formatDisplayDate, formatDisplayDateTime } from '../utils/dateFormat';
+import AbstractBackground from '../components/AbstractBackground';
 import type { RootStackParamList } from '../navigation/types';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'ReminderDetail'>;
@@ -15,6 +16,7 @@ export default function ReminderDetailScreen({ route, navigation }: Props) {
   if (!reminder) {
     return (
       <View style={styles.container}>
+        <AbstractBackground />
         <Text style={styles.placeholder}>Reminder not found.</Text>
       </View>
     );
@@ -37,7 +39,9 @@ export default function ReminderDetailScreen({ route, navigation }: Props) {
   }
 
   return (
-    <ScrollView style={styles.container} contentContainerStyle={styles.content}>
+    <View style={styles.container}>
+      <AbstractBackground />
+      <ScrollView style={styles.scroll} contentContainerStyle={styles.content}>
       <Text style={styles.category}>
         {def.icon} {def.label}
       </Text>
@@ -93,7 +97,8 @@ export default function ReminderDetailScreen({ route, navigation }: Props) {
           <Text style={[styles.actionLabel, styles.deleteLabel]}>Delete</Text>
         </Pressable>
       </View>
-    </ScrollView>
+      </ScrollView>
+    </View>
   );
 }
 
@@ -113,7 +118,8 @@ function DetailRow({ label, value }: { label: string; value: string }) {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#fff' },
+  container: { flex: 1 },
+  scroll: { flex: 1 },
   content: { padding: 16 },
   placeholder: { color: '#6B7280' },
   category: { fontSize: 13, color: '#6B7280', marginBottom: 4 },

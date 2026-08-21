@@ -76,6 +76,7 @@ const webInputStyle: CSSProperties = {
   fontSize: 14,
   color: '#111827',
   fontFamily: 'inherit',
+  backgroundColor: '#FFFFFF',
 };
 
 const styles = StyleSheet.create({

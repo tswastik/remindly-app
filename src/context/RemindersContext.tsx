@@ -8,6 +8,7 @@ import {
   type ReactNode,
 } from 'react';
 import * as reminderRepository from '../db/reminderRepository';
+import * as notificationService from '../notifications/notificationService';
 import type { Category, Reminder, ReminderInput } from '../types/reminder';
 
 interface State {
@@ -52,27 +53,34 @@ export function RemindersProvider({ children }: { children: ReactNode }) {
   const [state, dispatch] = useReducer(reducer, { reminders: [], loading: true });
 
   useEffect(() => {
+    notificationService.ensureChannel();
+    notificationService.requestPermissions();
     reminderRepository.listAll().then((reminders) => dispatch({ type: 'LOADED', reminders }));
   }, []);
 
   const addReminder = useCallback(async (input: ReminderInput) => {
     const reminder = await reminderRepository.create(input);
+    await notificationService.scheduleReminder(reminder);
     dispatch({ type: 'ADDED', reminder });
     return reminder;
   }, []);
 
   const updateReminder = useCallback(async (id: number, input: ReminderInput) => {
+    await notificationService.cancelReminder(id);
     const reminder = await reminderRepository.update(id, input);
+    await notificationService.scheduleReminder(reminder);
     dispatch({ type: 'UPDATED', reminder });
     return reminder;
   }, []);
 
   const deleteReminder = useCallback(async (id: number) => {
+    await notificationService.cancelReminder(id);
     await reminderRepository.remove(id);
     dispatch({ type: 'REMOVED', id });
   }, []);
 
   const markDone = useCallback(async (id: number) => {
+    await notificationService.cancelReminder(id);
     const reminder = await reminderRepository.updateStatus(id, 'done');
     dispatch({ type: 'UPDATED', reminder });
   }, []);

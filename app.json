@@ -1,7 +1,7 @@
 {
   "expo": {
-    "name": "reminder-app",
-    "slug": "reminder-app",
+    "name": "Remindly",
+    "slug": "remindly",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
@@ -10,6 +10,7 @@
       "supportsTablet": true
     },
     "android": {
+      "package": "com.tswastik.reminderapp",
       "adaptiveIcon": {
         "backgroundColor": "#E6F4FE",
         "foregroundImage": "./assets/android-icon-foreground.png",
@@ -23,7 +24,14 @@
     },
     "plugins": [
       "expo-sqlite",
-      "@react-native-community/datetimepicker"
-    ]
+      "@react-native-community/datetimepicker",
+      "expo-font"
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "07292b49-ff0b-4f7d-97f9-92abefd53cff"
+      }
+    },
+    "owner": "sociotechutil"
   }
 }

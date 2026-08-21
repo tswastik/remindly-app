@@ -10,7 +10,7 @@ export interface CategoryDef {
 export const CATEGORIES: CategoryDef[] = [
   {
     id: 'financial',
-    label: 'Financial Obligations',
+    label: 'Money Matters',
     icon: '💳',
     subcategories: [
       'Credit Card Due',
@@ -23,37 +23,37 @@ export const CATEGORIES: CategoryDef[] = [
   },
   {
     id: 'personal_event',
-    label: 'Birthdays & Anniversaries',
+    label: 'Special Days',
     icon: '🎂',
     subcategories: ['Birthday', 'Anniversary', 'Other'],
   },
   {
     id: 'todo',
-    label: 'Daily To-Do',
+    label: 'Daily Tasks',
     icon: '✅',
     subcategories: [],
   },
   {
     id: 'maintenance',
-    label: 'Maintenance Due',
+    label: 'Upkeep',
     icon: '🔧',
     subcategories: ['Vehicle Service', 'Gas Refilling', 'TV Recharge', 'Water Purifier Maintenance', 'Other'],
   },
   {
     id: 'study',
-    label: 'Study Reminder',
+    label: 'Study Buzz',
     icon: '📚',
     subcategories: [],
   },
   {
     id: 'note',
-    label: 'Memorize / Notes',
+    label: 'Quick Notes',
     icon: '📝',
     subcategories: [], // free-text custom category, entered by the user
   },
   {
     id: 'vacation',
-    label: 'Vacation / Outing Plan',
+    label: 'Plans Ahead',
     icon: '🏖️',
     subcategories: [],
   },
