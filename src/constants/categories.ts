@@ -18,13 +18,14 @@ export const CATEGORIES: CategoryDef[] = [
       'Insurance Premium Due',
       'Bill Payment Due',
       'Liability Due',
+      'Other',
     ],
   },
   {
     id: 'personal_event',
     label: 'Birthdays & Anniversaries',
     icon: '🎂',
-    subcategories: ['Birthday', 'Anniversary'],
+    subcategories: ['Birthday', 'Anniversary', 'Other'],
   },
   {
     id: 'todo',
@@ -36,7 +37,7 @@ export const CATEGORIES: CategoryDef[] = [
     id: 'maintenance',
     label: 'Maintenance Due',
     icon: '🔧',
-    subcategories: ['Vehicle Service', 'Gas Refilling', 'TV Recharge', 'Water Purifier Maintenance'],
+    subcategories: ['Vehicle Service', 'Gas Refilling', 'TV Recharge', 'Water Purifier Maintenance', 'Other'],
   },
   {
     id: 'study',

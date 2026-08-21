@@ -29,3 +29,9 @@ export interface Reminder {
   createdAt: string;
   updatedAt: string;
 }
+
+// Fields the Add/Edit form collects. The repository fills in id/timestamps/notificationId.
+export type ReminderInput = Omit<
+  Reminder,
+  'id' | 'createdAt' | 'updatedAt' | 'notificationId'
+>;
