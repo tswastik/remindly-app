@@ -11,7 +11,7 @@ type Props = NativeStackScreenProps<RootStackParamList, 'ReminderDetail'>;
 export default function ReminderDetailScreen({ route, navigation }: Props) {
   const { reminderId } = route.params;
   const reminder = useReminder(reminderId);
-  const { markDone, deleteReminder } = useReminders();
+  const { markDone, snoozeReminder, deleteReminder } = useReminders();
 
   if (!reminder) {
     return (
@@ -72,6 +72,9 @@ export default function ReminderDetailScreen({ route, navigation }: Props) {
 
       {reminder.notes && <DetailRow label="Notes" value={reminder.notes} />}
       <DetailRow label="Status" value={reminder.status} />
+      {reminder.status === 'snoozed' && reminder.snoozedUntil && (
+        <DetailRow label="Snoozed Until" value={formatDisplayDateTime(reminder.snoozedUntil)} />
+      )}
 
       <View style={styles.actions}>
         <Pressable
@@ -86,12 +89,20 @@ export default function ReminderDetailScreen({ route, navigation }: Props) {
           <Text style={styles.actionLabel}>Edit</Text>
         </Pressable>
         {reminder.status !== 'done' && (
-          <Pressable
-            style={[styles.actionButton, styles.doneButton]}
-            onPress={() => markDone(reminder.id)}
-          >
-            <Text style={styles.actionLabel}>Mark Done</Text>
-          </Pressable>
+          <>
+            <Pressable
+              style={[styles.actionButton, styles.doneButton]}
+              onPress={() => markDone(reminder.id)}
+            >
+              <Text style={styles.actionLabel}>Mark Done</Text>
+            </Pressable>
+            <Pressable
+              style={[styles.actionButton, styles.snoozeButton]}
+              onPress={() => snoozeReminder(reminder.id)}
+            >
+              <Text style={styles.actionLabel}>Snooze</Text>
+            </Pressable>
+          </>
         )}
         <Pressable style={[styles.actionButton, styles.deleteButton]} onPress={handleDelete}>
           <Text style={[styles.actionLabel, styles.deleteLabel]}>Delete</Text>
@@ -128,7 +139,7 @@ const styles = StyleSheet.create({
   row: { marginBottom: 12 },
   rowLabel: { fontSize: 12, fontWeight: '600', color: '#6B7280', marginBottom: 2 },
   rowValue: { fontSize: 15, color: '#111827' },
-  actions: { flexDirection: 'row', gap: 10, marginTop: 20 },
+  actions: { flexDirection: 'row', flexWrap: 'wrap', gap: 10, marginTop: 20 },
   actionButton: {
     backgroundColor: '#2563EB',
     paddingVertical: 10,
@@ -136,6 +147,7 @@ const styles = StyleSheet.create({
     borderRadius: 8,
   },
   doneButton: { backgroundColor: '#16A34A' },
+  snoozeButton: { backgroundColor: '#B45309' },
   deleteButton: { backgroundColor: '#FEE2E2' },
   actionLabel: { color: '#fff', fontWeight: '600' },
   deleteLabel: { color: '#DC2626' },

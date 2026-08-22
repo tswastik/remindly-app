@@ -7,8 +7,10 @@ import {
   useReducer,
   type ReactNode,
 } from 'react';
+import { Alert } from 'react-native';
 import * as reminderRepository from '../db/reminderRepository';
 import * as notificationService from '../notifications/notificationService';
+import * as actionHandlers from '../notifications/actionHandlers';
 import type { Category, Reminder, ReminderInput } from '../types/reminder';
 
 interface State {
@@ -45,9 +47,24 @@ interface RemindersContextValue {
   updateReminder: (id: number, input: ReminderInput) => Promise<Reminder>;
   deleteReminder: (id: number) => Promise<void>;
   markDone: (id: number) => Promise<void>;
+  snoozeReminder: (id: number) => Promise<void>;
 }
 
 const RemindersContext = createContext<RemindersContextValue | undefined>(undefined);
+
+async function promptForExactAlarmPermission() {
+  const granted = await notificationService.isExactAlarmPermissionGranted();
+  if (granted) return;
+
+  Alert.alert(
+    'Allow precise reminders?',
+    'Remindly needs the "Alarms & reminders" permission to notify you at the exact time you set, even in battery-saving mode.',
+    [
+      { text: 'Not now', style: 'cancel' },
+      { text: 'Open Settings', onPress: () => notificationService.openExactAlarmSettings() },
+    ],
+  );
+}
 
 export function RemindersProvider({ children }: { children: ReactNode }) {
   const [state, dispatch] = useReducer(reducer, { reminders: [], loading: true });
@@ -55,7 +72,15 @@ export function RemindersProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     notificationService.ensureChannel();
     notificationService.requestPermissions();
+    promptForExactAlarmPermission();
     reminderRepository.listAll().then((reminders) => dispatch({ type: 'LOADED', reminders }));
+
+    const unsubscribe = notificationService.onForegroundAction(async ({ actionId, reminderId }) => {
+      await actionHandlers.handleNotificationAction(actionId, reminderId);
+      const reminder = await reminderRepository.getById(reminderId);
+      if (reminder) dispatch({ type: 'UPDATED', reminder });
+    });
+    return unsubscribe;
   }, []);
 
   const addReminder = useCallback(async (input: ReminderInput) => {
@@ -80,9 +105,13 @@ export function RemindersProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const markDone = useCallback(async (id: number) => {
-    await notificationService.cancelReminder(id);
-    const reminder = await reminderRepository.updateStatus(id, 'done');
-    dispatch({ type: 'UPDATED', reminder });
+    const reminder = await actionHandlers.handleMarkDone(id);
+    if (reminder) dispatch({ type: 'UPDATED', reminder });
+  }, []);
+
+  const snoozeReminder = useCallback(async (id: number) => {
+    const reminder = await actionHandlers.handleSnooze(id);
+    if (reminder) dispatch({ type: 'UPDATED', reminder });
   }, []);
 
   const value = useMemo<RemindersContextValue>(
@@ -93,8 +122,9 @@ export function RemindersProvider({ children }: { children: ReactNode }) {
       updateReminder,
       deleteReminder,
       markDone,
+      snoozeReminder,
     }),
-    [state, addReminder, updateReminder, deleteReminder, markDone],
+    [state, addReminder, updateReminder, deleteReminder, markDone, snoozeReminder],
   );
 
   return <RemindersContext.Provider value={value}>{children}</RemindersContext.Provider>;

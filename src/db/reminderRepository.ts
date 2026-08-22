@@ -138,6 +138,18 @@ export async function updateStatus(id: number, status: ReminderStatus): Promise<
   return updated;
 }
 
+export async function snoozeUntil(id: number, snoozedUntilIso: string): Promise<Reminder> {
+  const db = await getDatabase();
+  const now = new Date().toISOString();
+  await db.runAsync(
+    "UPDATE reminders SET status = 'snoozed', snoozed_until = ?, updated_at = ? WHERE id = ?",
+    [snoozedUntilIso, now, id],
+  );
+  const updated = await getById(id);
+  if (!updated) throw new Error(`Reminder ${id} not found after snooze`);
+  return updated;
+}
+
 export async function remove(id: number): Promise<void> {
   const db = await getDatabase();
   await db.runAsync('DELETE FROM reminders WHERE id = ?', [id]);
