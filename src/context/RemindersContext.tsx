@@ -11,6 +11,7 @@ import { Alert } from 'react-native';
 import * as reminderRepository from '../db/reminderRepository';
 import * as notificationService from '../notifications/notificationService';
 import * as actionHandlers from '../notifications/actionHandlers';
+import * as backupService from '../backup/backupService';
 import type { Category, Reminder, ReminderInput } from '../types/reminder';
 
 interface State {
@@ -48,6 +49,8 @@ interface RemindersContextValue {
   deleteReminder: (id: number) => Promise<void>;
   markDone: (id: number) => Promise<void>;
   snoozeReminder: (id: number) => Promise<void>;
+  exportBackup: () => Promise<void>;
+  importBackup: () => Promise<number>;
 }
 
 const RemindersContext = createContext<RemindersContextValue | undefined>(undefined);
@@ -114,6 +117,32 @@ export function RemindersProvider({ children }: { children: ReactNode }) {
     if (reminder) dispatch({ type: 'UPDATED', reminder });
   }, []);
 
+  const exportBackup = useCallback(async () => {
+    await backupService.writeAndShareBackup(state.reminders);
+  }, [state.reminders]);
+
+  const importBackup = useCallback(async () => {
+    const payload = await backupService.pickAndReadBackup();
+    if (!payload) return 0;
+    for (const r of payload.reminders) {
+      await addReminder({
+        category: r.category,
+        subcategory: r.subcategory,
+        title: r.title,
+        notes: r.notes,
+        dueDate: r.dueDate,
+        endDate: r.endDate,
+        destination: r.destination,
+        stayOptions: r.stayOptions,
+        recurrenceType: r.recurrenceType,
+        recurrenceInterval: r.recurrenceInterval,
+        status: r.status,
+        snoozedUntil: r.snoozedUntil,
+      });
+    }
+    return payload.reminders.length;
+  }, [addReminder]);
+
   const value = useMemo<RemindersContextValue>(
     () => ({
       reminders: state.reminders,
@@ -123,8 +152,19 @@ export function RemindersProvider({ children }: { children: ReactNode }) {
       deleteReminder,
       markDone,
       snoozeReminder,
+      exportBackup,
+      importBackup,
     }),
-    [state, addReminder, updateReminder, deleteReminder, markDone, snoozeReminder],
+    [
+      state,
+      addReminder,
+      updateReminder,
+      deleteReminder,
+      markDone,
+      snoozeReminder,
+      exportBackup,
+      importBackup,
+    ],
   );
 
   return <RemindersContext.Provider value={value}>{children}</RemindersContext.Provider>;

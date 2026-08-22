@@ -24,6 +24,13 @@ const SCHEMA = `
 
   CREATE INDEX IF NOT EXISTS idx_reminders_category ON reminders(category);
   CREATE INDEX IF NOT EXISTS idx_reminders_status ON reminders(status);
+
+  CREATE TABLE IF NOT EXISTS profile (
+    id INTEGER PRIMARY KEY CHECK (id = 1),
+    photo_uri TEXT,
+    mobile_number TEXT,
+    updated_at TEXT NOT NULL
+  );
 `;
 
 let dbPromise: Promise<SQLite.SQLiteDatabase> | null = null;

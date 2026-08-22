@@ -1,10 +1,9 @@
 import { FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
-import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { CATEGORIES } from '../constants/categories';
 import AbstractBackground from '../components/AbstractBackground';
-import type { RootStackParamList } from '../navigation/types';
+import type { HomeTabScreenProps } from '../navigation/types';
 
-type Props = NativeStackScreenProps<RootStackParamList, 'Home'>;
+type Props = HomeTabScreenProps;
 
 export default function HomeScreen({ navigation }: Props) {
   return (
