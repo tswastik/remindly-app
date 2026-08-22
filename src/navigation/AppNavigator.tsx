@@ -1,3 +1,4 @@
+import { Image, StyleSheet } from 'react-native';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import HomeScreen from '../screens/HomeScreen';
@@ -17,12 +18,21 @@ export default function AppNavigator() {
           name="Home"
           component={HomeScreen}
           options={{
-            title: 'Remindly',
-            headerTitleStyle: {
-              fontFamily: 'Poppins_700Bold',
-              fontSize: 22,
-              color: '#2A6F5E',
-            },
+            headerTitleAlign: 'center',
+            headerBackground: () => (
+              <Image
+                source={require('../../assets/header-gradient.png')}
+                style={styles.headerBackground}
+                resizeMode="cover"
+              />
+            ),
+            headerTitle: () => (
+              <Image
+                source={require('../../assets/Remindly Font.png')}
+                style={styles.headerLogo}
+                resizeMode="contain"
+              />
+            ),
           }}
         />
         <Stack.Screen
@@ -46,3 +56,16 @@ export default function AppNavigator() {
     </NavigationContainer>
   );
 }
+
+const styles = StyleSheet.create({
+  headerBackground: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    width: '100%',
+    height: '100%',
+  },
+  headerLogo: { width: 122, height: 56 },
+});
