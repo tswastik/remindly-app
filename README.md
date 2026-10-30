@@ -1,4 +1,7 @@
 This is how the (android) mobile app would looks like.
-![Image 1](https://github.com/tswastik/remindly-app/blob/main/Remindly1.jpeg?raw=true)
-![Image 2](https://github.com/tswastik/remindly-app/blob/main/Remindly2.jpeg?raw=true)
-![Image 3](https://github.com/tswastik/remindly-app/blob/main/Remindly3.jpeg?raw=true)
+
+<img src="https://github.com/tswastik/remindly-app/blob/main/Remindly1.jpeg" width="300" alt="Image 1">
+
+<img src="https://github.com/tswastik/remindly-app/blob/main/Remindly2.jpeg" width="300" alt="Image 2">
+
+<img src="https://github.com/tswastik/remindly-app/blob/main/Remindly3.jpeg" width="300" alt="Image 3">
