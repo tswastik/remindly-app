@@ -70,6 +70,9 @@ export default function ReminderDetailScreen({ route, navigation }: Props) {
         </>
       )}
 
+      {reminder.advanceMinutes && (
+        <DetailRow label="Reminds Me" value={formatAdvanceMinutes(reminder.advanceMinutes)} />
+      )}
       {reminder.notes && <DetailRow label="Notes" value={reminder.notes} />}
       <DetailRow label="Status" value={reminder.status} />
       {reminder.status === 'snoozed' && reminder.snoozedUntil && (
@@ -117,6 +120,13 @@ function formatRecurrence(reminder: { recurrenceType: string; recurrenceInterval
   if (reminder.recurrenceType === 'none') return 'Does not repeat';
   if (reminder.recurrenceType === 'custom_days') return `Every ${reminder.recurrenceInterval} days`;
   return reminder.recurrenceType.charAt(0).toUpperCase() + reminder.recurrenceType.slice(1);
+}
+
+function formatAdvanceMinutes(minutes: number): string {
+  if (minutes % 10080 === 0) return `${minutes / 10080} week${minutes === 10080 ? '' : 's'} before`;
+  if (minutes % 1440 === 0) return `${minutes / 1440} day${minutes === 1440 ? '' : 's'} before`;
+  if (minutes % 60 === 0) return `${minutes / 60} hour${minutes === 60 ? '' : 's'} before`;
+  return `${minutes} min before`;
 }
 
 function DetailRow({ label, value }: { label: string; value: string }) {

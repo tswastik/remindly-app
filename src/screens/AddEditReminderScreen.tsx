@@ -21,6 +21,16 @@ const RECURRENCE_OPTIONS: { label: string; value: RecurrenceType }[] = [
   { label: 'Custom', value: 'custom_days' },
 ];
 
+// Encoded as strings (minutes, or 'none') to fit ChipSelector's string-only value type.
+const ADVANCE_OPTIONS: { label: string; value: string }[] = [
+  { label: 'None', value: 'none' },
+  { label: '15 min before', value: '15' },
+  { label: '1 hour before', value: '60' },
+  { label: '1 day before', value: '1440' },
+  { label: '3 days before', value: '4320' },
+  { label: '1 week before', value: '10080' },
+];
+
 function startOfDay(date: Date): Date {
   const d = new Date(date);
   d.setHours(0, 0, 0, 0);
@@ -69,6 +79,10 @@ export default function AddEditReminderScreen({ route, navigation }: Props) {
   const [recurrenceIntervalInput, setRecurrenceIntervalInput] = useState(
     existing?.recurrenceInterval ? String(existing.recurrenceInterval) : '',
   );
+  const [advanceMinutes, setAdvanceMinutes] = useState<string>(() => {
+    if (existing) return existing.advanceMinutes ? String(existing.advanceMinutes) : 'none';
+    return def.defaultAdvanceMinutes > 0 ? String(def.defaultAdvanceMinutes) : 'none';
+  });
 
   async function handleSave() {
     if (!title.trim()) {
@@ -90,6 +104,7 @@ export default function AddEditReminderScreen({ route, navigation }: Props) {
       endDate: isVacation ? endDate.toISOString() : null,
       destination: isVacation ? destination.trim() || null : null,
       stayOptions: isVacation && stayOptions.length > 0 ? stayOptions : null,
+      advanceMinutes: advanceMinutes === 'none' ? null : Number(advanceMinutes),
       recurrenceType: isVacation ? 'none' : recurrenceType,
       recurrenceInterval:
         !isVacation && recurrenceType === 'custom_days' ? Number(recurrenceIntervalInput) || null : null,
@@ -201,6 +216,10 @@ export default function AddEditReminderScreen({ route, navigation }: Props) {
           )}
         </>
       )}
+
+      <Field label="Remind Me Earlier">
+        <ChipSelector options={ADVANCE_OPTIONS} value={advanceMinutes} onChange={setAdvanceMinutes} />
+      </Field>
 
       <Pressable style={styles.saveButton} onPress={handleSave}>
         <Text style={styles.saveButtonLabel}>{reminderId ? 'Save Changes' : 'Create Reminder'}</Text>

@@ -133,3 +133,56 @@ await notifee.createTriggerNotification({
 - `src/context/RemindersContext.tsx`
 - `index.js` (background notification handler)
 - `app.json` (notifee config plugin + Android permissions)
+
+---
+
+## Phase 6 — Advance Reminder Notifications (all categories)
+
+**Goal:** in addition to the existing at-due-time exact-alarm notification, fire an earlier "heads up" notification before the due moment, across all 7 categories.
+
+**Schema:** add a nullable `advance_minutes INTEGER` column to `reminders` (migration in `database.ts`). `NULL`/`0` = no advance notice. Editable per reminder in the Add/Edit form via a picker (None / 15 min / 1 hour / 1 day / 3 days / 1 week). The form suggests a category-based default when creating a new reminder (e.g. `personal_event`/`financial`/`vacation` → 1 day, `todo`/`maintenance`/`study`/`note` → None) but it's always explicitly stored per reminder, never recomputed from category later.
+
+**Scheduling (`notificationService.ts`):**
+- `scheduleReminder()` gains a sibling `scheduleAdvanceNotification()` — id `${reminder.id}-advance`, trigger timestamp = `due_date - advance_minutes`, only scheduled if that timestamp is still in the future.
+- `cancelReminder()` cancels both `String(id)` and `${id}-advance`.
+- The advance notification is display-only: title "Upcoming: {title}", body = due date/time + category label, `pressAction: { id: 'default' }` — same as the main notification, which currently just opens the app (no existing deep-link-to-detail-screen infra in this codebase, so Phase 6 doesn't add one). No Mark Done/Snooze actions on it — those stay exclusively on the real due-time alert so nothing can be marked done early.
+- Same cancel-then-reschedule pattern as the main notification on edit.
+
+**UI:** Add/Edit form gets a new "Remind me earlier" picker next to the due date/time field.
+
+**No new native dependency.** Pure JS/SQLite + notifee (already linked) — **no EAS rebuild needed**, hot-reloads like any other JS change.
+
+**Verification:** schedule a reminder a few minutes out with a short advance notice to confirm both notifications fire independently and on time; confirm the skip-if-past-due logic doesn't schedule an advance notification that would fire after (or very close to) the main one; confirm editing/deleting cancels both.
+
+## Phase 7 — Special Days SMS Alert (1 day before, silent auto-send)
+
+**Goal:** for `personal_event` ("Special Days") reminders specifically, silently send a real SMS 1 day before, in addition to the Phase 6 advance notification.
+
+**Why SMS, not WhatsApp:** WhatsApp has no free silent-send option — the only fully automatic route is the paid Meta/Twilio Business API (per-message cost + Business account + template approval), overkill for a personal single-recipient app. Device-native SMS is free (your own SIM/carrier plan) but Expo's own `expo-sms` module isn't silent either — it just opens the Messages app for you to tap Send. True silent sending needs a module that calls Android's `SmsManager` directly; the community packages for this (`react-native-send-sms`, `react-native-sms-x`, `react-native-get-sms-android`) are all abandoned (last released 2016–2020, predate the New Architecture this project already requires), so instead of depending on one, Phase 7 adds a small custom native module.
+
+**Recipient:** defaults to the phone number already stored on the Profile screen (Phase 5); an optional per-reminder override field (shown only when category = `personal_event`) lets a specific Special Day SMS a different number instead.
+
+**Schema:** add `sms_enabled INTEGER NOT NULL DEFAULT 0` and `sms_phone_override TEXT` (nullable) columns to `reminders`.
+
+**New native module — `modules/sms-sender/` (custom, in-repo, not a 3rd-party dependency):**
+- A small Kotlin Android module (~30-40 lines) exposing `sendSms(phoneNumber: string, message: string): Promise<void>`, calling `android.telephony.SmsManager.getDefault().sendTextMessage(...)` directly.
+- Scaffolded with `npx create-expo-module --local` so it autolinks into the existing dev client exactly like any other Expo module.
+- `SEND_SMS` manifest permission added to `app.json`'s `android.permissions` array (same place `SCHEDULE_EXACT_ALARM`/`USE_EXACT_ALARM` already live).
+- Runtime permission requested via React Native core's `PermissionsAndroid.request('android.permission.SEND_SMS')`, prompted the first time a `personal_event` reminder with SMS enabled is saved — mirrors the existing exact-alarm permission-prompt pattern already used in `RemindersContext`'s startup check.
+
+**Trigger mechanism — reuses Phase 6's scheduling, no separate alarm:**
+- The Phase 6 `${id}-advance` trigger notification, for a `personal_event` reminder with `sms_enabled`, carries extra notifee notification data (`{ smsEnabled: true, phoneNumber }`), and its lead time defaults to a fixed 1 day (reusing the same `advance_minutes` column, just not user-editable for this category).
+- `index.ts`'s existing `notifee.onBackgroundEvent`/`onForegroundEvent` handlers (already wired for Mark Done/Snooze) get a new case: `EventType.DELIVERED` on a `-advance` notification with `smsEnabled` data → call `SmsSender.sendSms(...)`. This fires identically whether the app is foregrounded, backgrounded, or fully killed, the same way action-button presses already do.
+
+**Build impact:** this is a new native module, so it needs one EAS dev-client rebuild (same category of work as the original notifee setup in Phase 3/4) — JS/UI changes after that hot-reload as normal.
+
+**Cost:** $0 — your own SIM via Android's native SMS API, no account, no API key, no per-message fee beyond whatever your carrier plan already charges for SMS (most Indian plans bundle these free).
+
+**Verification:** real-device test with `SEND_SMS` granted — confirm the SMS actually arrives at the target number (shorten the lead time to a few minutes for testing rather than waiting a real day); test with the app foregrounded, backgrounded, and fully killed, same 3-state matrix as the original Phase 4 exact-alarm testing; test the permission-denied path — confirm it fails gracefully (no crash, the regular push notification still fires) if `SEND_SMS` is refused.
+
+**New critical files:**
+- `src/db/database.ts` — migration for `advance_minutes`, `sms_enabled`, `sms_phone_override`
+- `src/notifications/notificationService.ts` — advance notification scheduling/cancellation
+- `index.ts` — new `EventType.DELIVERED` case
+- `modules/sms-sender/` — new local native module (Kotlin)
+- `app.json` — `SEND_SMS` permission

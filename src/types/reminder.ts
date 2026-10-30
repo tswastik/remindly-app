@@ -21,6 +21,7 @@ export interface Reminder {
   endDate: string | null; // ISO 8601; only used for 'vacation' — trip END date
   destination: string | null; // only used for 'vacation'
   stayOptions: string[] | null; // only used for 'vacation'
+  advanceMinutes: number | null; // minutes before dueDate to fire an extra "upcoming" notification; null = none
   recurrenceType: RecurrenceType;
   recurrenceInterval: number | null; // only used when recurrenceType = 'custom_days'
   status: ReminderStatus;

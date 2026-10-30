@@ -134,6 +134,7 @@ export function RemindersProvider({ children }: { children: ReactNode }) {
         endDate: r.endDate,
         destination: r.destination,
         stayOptions: r.stayOptions,
+        advanceMinutes: r.advanceMinutes,
         recurrenceType: r.recurrenceType,
         recurrenceInterval: r.recurrenceInterval,
         status: r.status,

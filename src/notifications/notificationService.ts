@@ -40,6 +40,10 @@ function notificationIdFor(id: number): string {
   return String(id);
 }
 
+function advanceNotificationIdFor(id: number): string {
+  return `${id}-advance`;
+}
+
 async function createNotificationAt(reminder: Reminder, timestamp: number): Promise<void> {
   if (timestamp <= Date.now()) return;
 
@@ -67,8 +71,36 @@ async function createNotificationAt(reminder: Reminder, timestamp: number): Prom
   );
 }
 
+async function createAdvanceNotificationAt(reminder: Reminder, timestamp: number): Promise<void> {
+  if (timestamp <= Date.now()) return;
+
+  const trigger: TimestampTrigger = {
+    type: TriggerType.TIMESTAMP,
+    timestamp,
+    alarmManager: { allowWhileIdle: true },
+  };
+
+  await notifee.createTriggerNotification(
+    {
+      id: advanceNotificationIdFor(reminder.id),
+      title: `Upcoming: ${reminder.title}`,
+      body: reminder.notes ?? getCategoryDef(reminder.category).label,
+      android: {
+        channelId: CHANNEL_ID,
+        pressAction: { id: 'default' },
+      },
+    },
+    trigger,
+  );
+}
+
 export async function scheduleReminder(reminder: Reminder): Promise<void> {
   await createNotificationAt(reminder, new Date(reminder.dueDate).getTime());
+
+  if (reminder.advanceMinutes) {
+    const advanceTimestamp = new Date(reminder.dueDate).getTime() - reminder.advanceMinutes * 60_000;
+    await createAdvanceNotificationAt(reminder, advanceTimestamp);
+  }
 }
 
 export async function scheduleSnooze(reminder: Reminder, minutes: number): Promise<Date> {
@@ -79,6 +111,7 @@ export async function scheduleSnooze(reminder: Reminder, minutes: number): Promi
 
 export async function cancelReminder(id: number): Promise<void> {
   await notifee.cancelTriggerNotification(notificationIdFor(id));
+  await notifee.cancelTriggerNotification(advanceNotificationIdFor(id));
 }
 
 export interface NotificationAction {

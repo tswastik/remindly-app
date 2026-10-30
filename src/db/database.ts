@@ -18,6 +18,7 @@ const SCHEMA = `
     status TEXT NOT NULL DEFAULT 'active',
     snoozed_until TEXT,
     notification_id TEXT,
+    advance_minutes INTEGER,
     created_at TEXT NOT NULL,
     updated_at TEXT NOT NULL
   );
@@ -35,10 +36,25 @@ const SCHEMA = `
 
 let dbPromise: Promise<SQLite.SQLiteDatabase> | null = null;
 
+// Lightweight migration for columns added after the table already shipped —
+// SQLite has no "ADD COLUMN IF NOT EXISTS", so check table_info first.
+async function ensureColumn(
+  db: SQLite.SQLiteDatabase,
+  table: string,
+  column: string,
+  type: string,
+): Promise<void> {
+  const columns = await db.getAllAsync<{ name: string }>(`PRAGMA table_info(${table})`);
+  if (!columns.some((c) => c.name === column)) {
+    await db.execAsync(`ALTER TABLE ${table} ADD COLUMN ${column} ${type}`);
+  }
+}
+
 export function getDatabase(): Promise<SQLite.SQLiteDatabase> {
   if (!dbPromise) {
     dbPromise = SQLite.openDatabaseAsync('reminders.db').then(async (db) => {
       await db.execAsync(SCHEMA);
+      await ensureColumn(db, 'reminders', 'advance_minutes', 'INTEGER');
       return db;
     });
   }

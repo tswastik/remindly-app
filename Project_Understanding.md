@@ -1,6 +1,6 @@
 # Project Understanding — Remindly
 
-A personal reminder/notification Android app built with React Native + Expo. Users create reminders across 7 life categories (financial, birthdays, daily tasks, maintenance, study, free-text notes, and vacation planning), each with a due date, and get a real Android notification when it's due — with exact-alarm precision, and Mark Done/Snooze buttons right on the notification that work even if the app is fully killed. A bottom tab bar (Home / Reminders / Profile) is the main navigation shell; Profile holds a local photo + mobile number, JSON backup/restore, and PDF/Excel export. Data lives entirely on-device in SQLite — no backend, no accounts.
+A personal reminder/notification Android app built with React Native + Expo. Users create reminders across 7 life categories (financial, birthdays, daily tasks, maintenance, study, free-text notes, and vacation planning), each with a due date, and get a real Android notification when it's due — with exact-alarm precision, and Mark Done/Snooze buttons right on the notification that work even if the app is fully killed. Each reminder can optionally fire a second "upcoming" heads-up notification some time before the due moment (Phase 6). A bottom tab bar (Home / Reminders / Profile) is the main navigation shell; Profile holds a local photo + mobile number, JSON backup/restore, and PDF/Excel export. Data lives entirely on-device in SQLite — no backend, no accounts.
 
 This document explains what every file in the project does and how they fit together, for anyone (including future-you) picking the codebase back up.
 
@@ -139,11 +139,13 @@ Key fields specific to the `vacation` category: `endDate` (trip end, vs. `dueDat
 
 ### `database.ts`
 `getDatabase()` lazily opens (once, memoized) a SQLite database file `reminders.db` via `expo-sqlite`'s async API, and runs the schema on first open — additive `CREATE TABLE IF NOT EXISTS` statements, so adding a new table is always a safe, non-destructive change for existing installs. Two tables:
-- `reminders` — the main table (see the original schema; unchanged since Phase 2).
+- `reminders` — the main table (see the original schema; `advance_minutes INTEGER` added in Phase 6 — nullable, minutes before `due_date` to fire a second "upcoming" notification).
 - `profile` — a **single-row** table (`id INTEGER PRIMARY KEY CHECK (id = 1)`) holding `photo_uri` and `mobile_number` for the Profile screen. The `CHECK (id = 1)` constraint is what enforces "only one row ever" — writes use `INSERT ... ON CONFLICT(id) DO UPDATE` (upsert) rather than separate insert/update logic.
 
+Columns added to an already-shipped table (like `advance_minutes`) can't just rely on `CREATE TABLE IF NOT EXISTS` — that statement is a no-op once the table already exists, so existing installs would never get the new column. `getDatabase()` also runs `ensureColumn(db, table, column, type)` after the schema exec: it checks `PRAGMA table_info(table)` and only runs `ALTER TABLE ... ADD COLUMN` if the column isn't already there (SQLite has no `ADD COLUMN IF NOT EXISTS`). This is the pattern to follow for any future column addition — don't just add it to the `CREATE TABLE` string and assume existing devices pick it up.
+
 ### `reminderRepository.ts`
-Unchanged since Phase 2 — pure data-access functions (`listAll`, `listByCategory`, `getById`, `create`, `update`, `updateStatus`, `snoozeUntil`, `remove`, `listDistinctNoteSubcategories`).
+Unchanged since Phase 2 except for `advance_minutes` being added to `ReminderRow`/`rowToReminder`/`create`/`update` in Phase 6 — otherwise pure data-access functions (`listAll`, `listByCategory`, `getById`, `create`, `update`, `updateStatus`, `snoozeUntil`, `remove`, `listDistinctNoteSubcategories`).
 
 ### `profileRepository.ts`
 `getProfile()` reads the single profile row (defaults to `{ photoUri: null, mobileNumber: null }` if it doesn't exist yet). `saveProfile(profile)` upserts it.
@@ -156,9 +158,9 @@ Unchanged since Phase 2 — pure data-access functions (`listAll`, `listByCatego
 Wraps `@notifee/react-native`. Key pieces:
 - `ensureChannel()` / `requestPermissions()` — channel setup and the `POST_NOTIFICATIONS` runtime permission, called once on app start.
 - `isExactAlarmPermissionGranted()` / `openExactAlarmSettings()` — Android 12+'s exact-alarm permission has **no runtime dialog**; the app checks `notifee.getNotificationSettings().android.alarm` and, if disabled, deep-links the user to the system Settings screen to enable "Alarms & reminders" manually (see `RemindersContext`'s startup prompt).
-- `scheduleReminder(reminder)` — schedules a `TimestampTrigger` with `alarmManager: { allowWhileIdle: true }` (exact-alarm delivery even under Doze) at `reminder.dueDate`, carrying two action buttons: **Mark Done** and **Snooze**. Silently skips scheduling if the due date is already in the past.
-- `scheduleSnooze(reminder, minutes)` — same trigger mechanics, but at `now + minutes` (used by the snooze flow); returns the computed snooze time.
-- `cancelReminder(id)` — cancels by `String(id)`, still the sole notification-id scheme (the `notification_id` DB column remains unused).
+- `scheduleReminder(reminder)` — schedules a `TimestampTrigger` with `alarmManager: { allowWhileIdle: true }` (exact-alarm delivery even under Doze) at `reminder.dueDate`, carrying two action buttons: **Mark Done** and **Snooze**. Silently skips scheduling if the due date is already in the past. Since Phase 6, if `reminder.advanceMinutes` is set it also schedules a second, separate "advance" notification via `createAdvanceNotificationAt()` at `dueDate - advanceMinutes`, id `${id}-advance` — display-only (no action buttons, so it can never be mistaken for the real due-time alert and can't mark something done early), same skip-if-past-due guard.
+- `scheduleSnooze(reminder, minutes)` — same trigger mechanics, but at `now + minutes` (used by the snooze flow); returns the computed snooze time. Deliberately calls the shared `createNotificationAt` helper directly rather than `scheduleReminder`, so snoozing never also (re)schedules an advance notification.
+- `cancelReminder(id)` — cancels both `String(id)` and `${id}-advance` (notifee no-ops on an id that was never scheduled, so this is safe to call even when a reminder has no advance notification). Still the sole notification-id scheme (the `notification_id` DB column remains unused).
 - `onForegroundAction(callback)` / `onBackgroundAction(callback)` — thin wrappers around `notifee.onForegroundEvent`/`onBackgroundEvent`, filtered to `ACTION_PRESS` events and normalized to `{ actionId, reminderId }`, so nothing outside this file needs to know notifee's raw event shape.
 
 ### `actionHandlers.ts`
@@ -236,8 +238,11 @@ New. Loads `{ photoUri, mobileNumber }` from `profileRepository` on mount.
 - **Export section**: "Export as PDF" and "Export as Excel" buttons call `exportService` directly with the full `reminders` list from context (read-only, no context method needed for these).
 - All four action buttons share a `runAction(name, fn)` helper that tracks a single `busyAction` string, so only the pressed button shows a spinner and disables itself; errors are caught and surfaced via `Alert.alert` rather than crashing the screen.
 
-### `CategoryListScreen.tsx` / `AddEditReminderScreen.tsx`
+### `CategoryListScreen.tsx`
 Unchanged from earlier phases.
+
+### `AddEditReminderScreen.tsx`
+Gained a **"Remind Me Earlier"** `ChipSelector` field (Phase 6), shown for every category including vacation — options are `None` / `15 min before` / `1 hour before` / `1 day before` / `3 days before` / `1 week before`, encoded as strings (`'none'` or minutes as a string) since `ChipSelector`'s `value`/`onChange` are string-only, then converted to `number | null` in `handleSave`. For a *new* reminder the initial selection comes from `getCategoryDef(category).defaultAdvanceMinutes` (1 day for `financial`/`personal_event`/`vacation`, none for the rest) — purely a starting suggestion; once saved, a reminder's `advanceMinutes` is explicit and never silently recomputed from category again, even if the category default changes later.
 
 ### `ReminderDetailScreen.tsx`
 Gained a **Snooze** button (alongside Edit/Mark Done/Delete, hidden once the reminder is done) calling `snoozeReminder`, and a "Snoozed Until" row shown when `status === 'snoozed'` — added specifically so snoozing can be tested/used in-app without waiting for a real notification to fire.
@@ -273,7 +278,8 @@ Unchanged — `formatDisplayDate`/`formatDisplayDateTime`, locale-aware display 
 ## What's not built yet
 
 - **Recurrence**: `notifications/recurrence.ts` (computing the next due date for `daily`/`weekly`/`monthly`/`yearly`/`custom_days` reminders) still doesn't exist. `markDone` on a recurring reminder just marks it done today — it does not reschedule itself for the next occurrence. `date-fns` is installed specifically for this, unused so far.
-- **Further polish** (originally "Phase 6"): category dashboard counts, "notes" custom-category autocomplete (the repository function `listDistinctNoteSubcategories` already exists, just unused by any screen), empty-state/theming refinement.
+- **Further polish** (originally "Phase 6" in the very first draft of PLAN.md, before "Phase 6" was repurposed for advance notifications — see below): category dashboard counts, "notes" custom-category autocomplete (the repository function `listDistinctNoteSubcategories` already exists, just unused by any screen), empty-state/theming refinement.
+- **Phase 7 — Special Days SMS alert**: planned in `PLAN.md` but not yet implemented. Silently sends a real SMS 1 day before a `personal_event` reminder, reusing Phase 6's advance-notification `DELIVERED` event rather than a separate alarm. Needs a new custom native module (`modules/sms-sender/`, not a 3rd-party package — the available community SMS-send packages are all abandoned, last released 2016–2020) and one more EAS dev-client rebuild.
 
 ## Notable decisions worth knowing if you keep working on this
 
