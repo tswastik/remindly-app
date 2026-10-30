@@ -35,7 +35,8 @@
         {
           "photosPermission": "Remindly needs access to your photos to set a profile picture."
         }
-      ]
+      ],
+      "expo-status-bar"
     ],
     "extra": {
       "eas": {
