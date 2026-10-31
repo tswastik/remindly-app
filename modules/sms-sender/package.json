@@ -1,0 +1,7 @@
+{
+  "name": "sms-sender",
+  "version": "0.1.0",
+  "description": "Local Expo module: sends a plain SMS directly via Android's SmsManager, no UI, no 3rd-party dependency.",
+  "main": "index.ts",
+  "license": "MIT"
+}

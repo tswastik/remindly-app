@@ -13,7 +13,8 @@
       "package": "com.tswastik.reminderapp",
       "permissions": [
         "SCHEDULE_EXACT_ALARM",
-        "USE_EXACT_ALARM"
+        "USE_EXACT_ALARM",
+        "SEND_SMS"
       ],
       "adaptiveIcon": {
         "backgroundColor": "#E6F4FE",

@@ -19,6 +19,8 @@ const SCHEMA = `
     snoozed_until TEXT,
     notification_id TEXT,
     advance_minutes INTEGER,
+    sms_enabled INTEGER NOT NULL DEFAULT 0,
+    sms_phone_override TEXT,
     created_at TEXT NOT NULL,
     updated_at TEXT NOT NULL
   );
@@ -55,6 +57,8 @@ export function getDatabase(): Promise<SQLite.SQLiteDatabase> {
     dbPromise = SQLite.openDatabaseAsync('reminders.db').then(async (db) => {
       await db.execAsync(SCHEMA);
       await ensureColumn(db, 'reminders', 'advance_minutes', 'INTEGER');
+      await ensureColumn(db, 'reminders', 'sms_enabled', 'INTEGER NOT NULL DEFAULT 0');
+      await ensureColumn(db, 'reminders', 'sms_phone_override', 'TEXT');
       return db;
     });
   }

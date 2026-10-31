@@ -73,6 +73,9 @@ export default function ReminderDetailScreen({ route, navigation }: Props) {
       {reminder.advanceMinutes && (
         <DetailRow label="Reminds Me" value={formatAdvanceMinutes(reminder.advanceMinutes)} />
       )}
+      {reminder.smsEnabled && (
+        <DetailRow label="Also Texts" value={reminder.smsPhoneOverride ?? 'Your Profile number'} />
+      )}
       {reminder.notes && <DetailRow label="Notes" value={reminder.notes} />}
       <DetailRow label="Status" value={reminder.status} />
       {reminder.status === 'snoozed' && reminder.snoozedUntil && (

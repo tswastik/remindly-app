@@ -12,6 +12,8 @@ interface ReminderRow {
   destination: string | null;
   stay_options: string | null;
   advance_minutes: number | null;
+  sms_enabled: number;
+  sms_phone_override: string | null;
   recurrence_type: string;
   recurrence_interval: number | null;
   status: string;
@@ -33,6 +35,8 @@ function rowToReminder(row: ReminderRow): Reminder {
     destination: row.destination,
     stayOptions: row.stay_options ? JSON.parse(row.stay_options) : null,
     advanceMinutes: row.advance_minutes,
+    smsEnabled: row.sms_enabled === 1,
+    smsPhoneOverride: row.sms_phone_override,
     recurrenceType: row.recurrence_type as Reminder['recurrenceType'],
     recurrenceInterval: row.recurrence_interval,
     status: row.status as ReminderStatus,
@@ -72,8 +76,9 @@ export async function create(input: ReminderInput): Promise<Reminder> {
   const result = await db.runAsync(
     `INSERT INTO reminders
       (category, subcategory, title, notes, due_date, end_date, destination, stay_options,
-       advance_minutes, recurrence_type, recurrence_interval, status, snoozed_until, notification_id, created_at, updated_at)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NULL, ?, ?)`,
+       advance_minutes, sms_enabled, sms_phone_override, recurrence_type, recurrence_interval,
+       status, snoozed_until, notification_id, created_at, updated_at)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NULL, ?, ?)`,
     [
       input.category,
       input.subcategory,
@@ -84,6 +89,8 @@ export async function create(input: ReminderInput): Promise<Reminder> {
       input.destination,
       input.stayOptions ? JSON.stringify(input.stayOptions) : null,
       input.advanceMinutes,
+      input.smsEnabled ? 1 : 0,
+      input.smsPhoneOverride,
       input.recurrenceType,
       input.recurrenceInterval,
       input.status,
@@ -103,8 +110,8 @@ export async function update(id: number, input: ReminderInput): Promise<Reminder
   await db.runAsync(
     `UPDATE reminders SET
       category = ?, subcategory = ?, title = ?, notes = ?, due_date = ?, end_date = ?,
-      destination = ?, stay_options = ?, advance_minutes = ?, recurrence_type = ?, recurrence_interval = ?,
-      status = ?, snoozed_until = ?, updated_at = ?
+      destination = ?, stay_options = ?, advance_minutes = ?, sms_enabled = ?, sms_phone_override = ?,
+      recurrence_type = ?, recurrence_interval = ?, status = ?, snoozed_until = ?, updated_at = ?
      WHERE id = ?`,
     [
       input.category,
@@ -116,6 +123,8 @@ export async function update(id: number, input: ReminderInput): Promise<Reminder
       input.destination,
       input.stayOptions ? JSON.stringify(input.stayOptions) : null,
       input.advanceMinutes,
+      input.smsEnabled ? 1 : 0,
+      input.smsPhoneOverride,
       input.recurrenceType,
       input.recurrenceInterval,
       input.status,

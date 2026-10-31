@@ -78,12 +78,23 @@ export function RemindersProvider({ children }: { children: ReactNode }) {
     promptForExactAlarmPermission();
     reminderRepository.listAll().then((reminders) => dispatch({ type: 'LOADED', reminders }));
 
-    const unsubscribe = notificationService.onForegroundAction(async ({ actionId, reminderId }) => {
+    const unsubscribeAction = notificationService.onForegroundAction(async ({ actionId, reminderId }) => {
       await actionHandlers.handleNotificationAction(actionId, reminderId);
       const reminder = await reminderRepository.getById(reminderId);
       if (reminder) dispatch({ type: 'UPDATED', reminder });
     });
-    return unsubscribe;
+
+    // Mirrors index.ts's background registration — when the advance
+    // notification for an SMS-enabled Special Day is delivered while the
+    // app is open, onBackgroundEvent never fires, so this is needed too.
+    const unsubscribeAdvanceSms = notificationService.onAdvanceSmsForeground(({ reminderId, phoneNumber }) => {
+      actionHandlers.handleAdvanceSms(reminderId, phoneNumber);
+    });
+
+    return () => {
+      unsubscribeAction();
+      unsubscribeAdvanceSms();
+    };
   }, []);
 
   const addReminder = useCallback(async (input: ReminderInput) => {
@@ -135,6 +146,8 @@ export function RemindersProvider({ children }: { children: ReactNode }) {
         destination: r.destination,
         stayOptions: r.stayOptions,
         advanceMinutes: r.advanceMinutes,
+        smsEnabled: r.smsEnabled,
+        smsPhoneOverride: r.smsPhoneOverride,
         recurrenceType: r.recurrenceType,
         recurrenceInterval: r.recurrenceInterval,
         status: r.status,

@@ -1,5 +1,5 @@
 import { useState, type ReactNode } from 'react';
-import { Alert, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Alert, Pressable, ScrollView, StyleSheet, Switch, Text, TextInput, View } from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { getCategoryDef } from '../constants/categories';
 import { useReminder, useReminders } from '../context/RemindersContext';
@@ -7,6 +7,7 @@ import ChipSelector from '../components/ChipSelector';
 import DateTimeField from '../components/DateTimeField';
 import StayOptionsEditor from '../components/StayOptionsEditor';
 import AbstractBackground from '../components/AbstractBackground';
+import { requestSendSmsPermission } from '../native/smsSender';
 import type { RecurrenceType, ReminderInput } from '../types/reminder';
 import type { RootStackParamList } from '../navigation/types';
 
@@ -83,6 +84,21 @@ export default function AddEditReminderScreen({ route, navigation }: Props) {
     if (existing) return existing.advanceMinutes ? String(existing.advanceMinutes) : 'none';
     return def.defaultAdvanceMinutes > 0 ? String(def.defaultAdvanceMinutes) : 'none';
   });
+  const isSpecialDay = category === 'personal_event';
+  const [smsEnabled, setSmsEnabled] = useState(existing?.smsEnabled ?? false);
+  const [smsPhoneOverride, setSmsPhoneOverride] = useState(existing?.smsPhoneOverride ?? '');
+
+  async function handleToggleSms(value: boolean) {
+    setSmsEnabled(value);
+    if (!value) return;
+    const granted = await requestSendSmsPermission();
+    if (!granted) {
+      Alert.alert(
+        'SMS permission needed',
+        'Remindly needs the SMS permission to text you for this Special Day. You can still save with this on, but the text won’t go out until the permission is granted.',
+      );
+    }
+  }
 
   async function handleSave() {
     if (!title.trim()) {
@@ -105,6 +121,8 @@ export default function AddEditReminderScreen({ route, navigation }: Props) {
       destination: isVacation ? destination.trim() || null : null,
       stayOptions: isVacation && stayOptions.length > 0 ? stayOptions : null,
       advanceMinutes: advanceMinutes === 'none' ? null : Number(advanceMinutes),
+      smsEnabled: isSpecialDay && smsEnabled,
+      smsPhoneOverride: isSpecialDay && smsPhoneOverride.trim() ? smsPhoneOverride.trim() : null,
       recurrenceType: isVacation ? 'none' : recurrenceType,
       recurrenceInterval:
         !isVacation && recurrenceType === 'custom_days' ? Number(recurrenceIntervalInput) || null : null,
@@ -221,6 +239,27 @@ export default function AddEditReminderScreen({ route, navigation }: Props) {
         <ChipSelector options={ADVANCE_OPTIONS} value={advanceMinutes} onChange={setAdvanceMinutes} />
       </Field>
 
+      {isSpecialDay && (
+        <Field label="Text Me Too">
+          <View style={styles.smsRow}>
+            <Text style={styles.smsRowLabel}>
+              Send a text at the same "Remind Me Earlier" time above
+            </Text>
+            <Switch value={smsEnabled} onValueChange={handleToggleSms} />
+          </View>
+          {smsEnabled && (
+            <TextInput
+              style={[styles.input, styles.smsPhoneInput]}
+              value={smsPhoneOverride}
+              onChangeText={setSmsPhoneOverride}
+              placeholder="Leave blank to use your Profile number"
+              placeholderTextColor="#9CA3AF"
+              keyboardType="phone-pad"
+            />
+          )}
+        </Field>
+      )}
+
       <Pressable style={styles.saveButton} onPress={handleSave}>
         <Text style={styles.saveButtonLabel}>{reminderId ? 'Save Changes' : 'Create Reminder'}</Text>
       </Pressable>
@@ -255,6 +294,9 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF',
   },
   multiline: { minHeight: 80, textAlignVertical: 'top' },
+  smsRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12 },
+  smsRowLabel: { flex: 1, fontSize: 13, color: '#374151' },
+  smsPhoneInput: { marginTop: 10 },
   saveButton: {
     backgroundColor: '#2563EB',
     paddingVertical: 14,

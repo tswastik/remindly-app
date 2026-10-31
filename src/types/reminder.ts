@@ -22,6 +22,8 @@ export interface Reminder {
   destination: string | null; // only used for 'vacation'
   stayOptions: string[] | null; // only used for 'vacation'
   advanceMinutes: number | null; // minutes before dueDate to fire an extra "upcoming" notification; null = none
+  smsEnabled: boolean; // only meaningful for category = 'personal_event'; sends a silent SMS when the advance notification fires
+  smsPhoneOverride: string | null; // custom recipient for the SMS; falls back to the Profile mobile number when null
   recurrenceType: RecurrenceType;
   recurrenceInterval: number | null; // only used when recurrenceType = 'custom_days'
   status: ReminderStatus;
