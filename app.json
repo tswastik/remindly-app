@@ -37,7 +37,15 @@
           "photosPermission": "Remindly needs access to your photos to set a profile picture."
         }
       ],
-      "expo-status-bar"
+      "expo-status-bar",
+      [
+        "expo-build-properties",
+        {
+          "android": {
+            "enableProguardInReleaseBuilds": false
+          }
+        }
+      ]
     ],
     "extra": {
       "eas": {
